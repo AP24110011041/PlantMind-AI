@@ -32,21 +32,27 @@ export default function DashboardCard({
   children,
 }: DashboardCardProps) {
   return (
-    <article className="rounded-lg border border-slate-800 bg-[#111827] p-5 shadow-xl shadow-slate-950/20">
+    <article
+      role="article"
+      aria-labelledby={`kpi-${title.replace(/\s+/g, '-').toLowerCase()}`}
+      tabIndex={0}
+      className="rounded-lg border border-slate-800 bg-[#111827] p-5 shadow-xl shadow-slate-950/20 transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-400">{title}</p>
-          <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+          <p id={`kpi-${title.replace(/\s+/g, '-').toLowerCase()}`} className="text-sm font-medium text-slate-400">{title}</p>
+          <p className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-white">{value}</p>
         </div>
         {Icon ? (
-          <div className={`rounded-lg border p-2.5 ${toneStyles[tone]}`}>
+          <div
+            className={`rounded-lg border p-2.5 ${toneStyles[tone]} flex items-center justify-center`}>
             <Icon aria-hidden="true" className="h-5 w-5" />
           </div>
         ) : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>
       {trend ? (
-        <span className="mt-4 inline-flex rounded-full border border-[#06B6D4]/25 bg-[#06B6D4]/10 px-2.5 py-1 text-xs font-semibold text-[#67E8F9]">
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#06B6D4]/25 bg-[#06B6D4]/10 px-2.5 py-1 text-xs font-semibold text-[#67E8F9]">
           {trend}
         </span>
       ) : null}

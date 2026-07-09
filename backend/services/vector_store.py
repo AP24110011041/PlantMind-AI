@@ -4,22 +4,47 @@ from typing import Any
 import chromadb
 from fastapi import HTTPException
 
+from services.retrieval_service import RetrievalService
+import os
+import logging
+
+
+logger = logging.getLogger("plantmind.vectorstore")
+
 
 class VectorStore:
     DEFAULT_COLLECTION_NAME = "plantmind_chunks"
     DEFAULT_PERSIST_DIR = Path(__file__).resolve().parents[1] / "chroma_db"
     TOP_K = 5
 
+    # cache PersistentClient and collection objects per (collection_name, persist_dir)
+    _collection_cache: dict[tuple[str, str], tuple[Any, Any]] = {}
+
     def __init__(
         self,
         collection_name: str = DEFAULT_COLLECTION_NAME,
         persist_dir: str | Path = DEFAULT_PERSIST_DIR,
     ) -> None:
-        self.client = chromadb.PersistentClient(path=str(persist_dir))
-        self.collection = self.client.get_or_create_collection(
+        persist_dir_str = str(persist_dir)
+        key = (collection_name, persist_dir_str)
+
+        cached = self._collection_cache.get(key)
+        if cached:
+            self.client, self.collection = cached
+            logger.debug("Reusing chroma client and collection for %s at %s", collection_name, persist_dir_str)
+            return
+
+        # Create a new persistent client and collection, then cache it
+        client = chromadb.PersistentClient(path=persist_dir_str)
+        collection = client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},
         )
+
+        self.client = client
+        self.collection = collection
+        self._collection_cache[key] = (self.client, self.collection)
+        logger.info("Created chroma client and collection '%s' at %s", collection_name, persist_dir_str)
 
     @staticmethod
     def _validate_chunks(chunks: list[dict[str, Any]]) -> None:
@@ -129,11 +154,20 @@ class VectorStore:
                 )
 
             chunk_metadata = self._metadata_for_chunk(chunk, metadata, index)
+            # enrich metadata with explicit fields, existing keys preserved
             chunk_metadata.update(
                 {
                     "chunk_id": chunk_id,
-                    "start": int(chunk.get("start", 0)),
-                    "end": int(chunk.get("end", 0)),
+                    "filename": str(
+                        chunk.get("filename") or chunk_metadata.get("filename") or "Unknown"
+                    ),
+                    "page_number": int(chunk.get("page_number", chunk_metadata.get("page_number", 0))),
+                    "section_title": str(
+                        chunk.get("section_title") or chunk_metadata.get("section_title") or ""
+                    ),
+                    # preserve optional diagnostics if available
+                    "char_count": int(chunk.get("char_count", chunk_metadata.get("char_count", 0))) ,
+                    "word_count": int(chunk.get("word_count", chunk_metadata.get("word_count", 0))),
                 }
             )
 
@@ -142,14 +176,25 @@ class VectorStore:
             vectors.append([float(value) for value in embedding_by_chunk_id[chunk_id]])
             metadatas.append(self._clean_metadata(chunk_metadata))
 
-        self.collection.upsert(
-            ids=ids,
-            documents=documents,
-            embeddings=vectors,
-            metadatas=metadatas,
-        )
+        # Perform upserts in batches to avoid huge single operations
+        try:
+            batch_size = int(os.getenv("VECTORSTORE_UPSERT_BATCH", "500"))
+        except ValueError:
+            batch_size = 500
 
-        return {"stored": len(ids), "ids": ids}
+        stored_ids: list[str] = []
+        for i in range(0, len(ids), batch_size):
+            j = min(i + batch_size, len(ids))
+            self.collection.upsert(
+                ids=ids[i:j],
+                documents=documents[i:j],
+                embeddings=vectors[i:j],
+                metadatas=metadatas[i:j],
+            )
+            stored_ids.extend(ids[i:j])
+
+        logger.info("Upserted %d chunk(s) into collection %s", len(stored_ids), self.collection.name)
+        return {"stored": len(stored_ids), "ids": stored_ids}
 
     def search(
         self,
@@ -178,12 +223,12 @@ class VectorStore:
         metadatas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0]
 
-        return [
+        raw_results = [
             {
                 "id": document_id,
                 "chunk_id": metadata.get("chunk_id"),
                 "text": document,
-                "metadata": metadata,
+                "metadata": metadata or {},
                 "distance": distance,
             }
             for document_id, document, metadata, distance in zip(
@@ -194,3 +239,19 @@ class VectorStore:
                 strict=True,
             )
         ]
+
+        # Enrich with similarity score and sort by similarity desc for robust ordering
+        enriched_with_similarity = []
+        for r in raw_results:
+            try:
+                sim = RetrievalService.cosine_similarity_from_distance(r.get("distance"))
+            except Exception:
+                sim = 0.0
+
+            r["similarity"] = sim
+            enriched_with_similarity.append(r)
+
+        enriched_with_similarity.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
+
+        # Final enrichment to map fields and preserve previous behavior
+        return [RetrievalService.enrich_search_result(result) for result in enriched_with_similarity]

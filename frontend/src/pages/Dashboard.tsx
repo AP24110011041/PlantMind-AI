@@ -128,7 +128,7 @@ const statusStyles: Record<RecentDocument['status'], string> = {
 
 export default function Dashboard() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <section className="rounded-lg border border-slate-800 bg-[#111827] p-5 shadow-xl shadow-slate-950/20">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
@@ -138,12 +138,12 @@ export default function Dashboard() {
             <h2 className="mt-3 text-2xl font-semibold text-white sm:text-3xl">
               Dashboard overview
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-slate-400 sm:text-base">
               Monitor document readiness, compliance posture, operational query volume,
               and active alerts from one responsive enterprise workspace.
             </p>
           </div>
-          <div className="rounded-lg border border-[#06B6D4]/25 bg-[#06B6D4]/10 p-4">
+          <div className="rounded-lg border border-[#06B6D4]/25 bg-[#06B6D4]/10 p-4" role="note" aria-label="Demo data notice">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-[#06B6D4] p-2 text-slate-950">
                 <SearchCheck aria-hidden="true" className="h-5 w-5" />
@@ -203,7 +203,8 @@ export default function Dashboard() {
             </div>
             <button
               type="button"
-              className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
+              className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
+              aria-label="View all recent documents"
             >
               View all
             </button>
@@ -221,10 +222,12 @@ export default function Dashboard() {
               {recentDocuments.map((document) => (
                 <article
                   key={document.name}
-                  className="grid gap-3 px-4 py-4 lg:grid-cols-[1.3fr_0.8fr_0.8fr_0.7fr_0.9fr] lg:items-center"
+                  tabIndex={0}
+                  aria-labelledby={`doc-${document.name.replace(/\s+/g, '-').toLowerCase()}`}
+                  className="grid gap-3 px-4 py-4 lg:grid-cols-[1.3fr_0.8fr_0.8fr_0.7fr_0.9fr] lg:items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
                 >
                   <div>
-                    <p className="font-medium text-white">{document.name}</p>
+                    <p id={`doc-${document.name.replace(/\s+/g, '-').toLowerCase()}`} className="font-medium text-white">{document.name}</p>
                     <p className="mt-1 text-xs text-slate-500 lg:hidden">
                       {document.category} / {document.owner}
                     </p>

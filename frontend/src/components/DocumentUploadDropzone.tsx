@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { FileUp, UploadCloud } from 'lucide-react'
+import { FileUp, UploadCloud, FileText } from 'lucide-react'
 
 type DocumentUploadDropzoneProps = {
   onFilesSelected: (files: File[]) => void
@@ -14,6 +14,7 @@ export default function DocumentUploadDropzone({
 }: DocumentUploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList?.length) {
@@ -25,6 +26,7 @@ export default function DocumentUploadDropzone({
     )
 
     if (pdfFiles.length > 0) {
+      setSelectedFiles(pdfFiles)
       onFilesSelected(pdfFiles)
     }
   }
@@ -122,6 +124,39 @@ export default function DocumentUploadDropzone({
           </div>
         </div>
       ) : null}
+
+      {/* Selected files preview (local only) */}
+      {selectedFiles.length > 0 && !isUploading ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-slate-300">Files ready to upload</h3>
+          <ul className="mt-2 space-y-2">
+            {selectedFiles.map((file) => (
+              <li key={file.name} className="flex items-center gap-3">
+                <div className="rounded-md bg-slate-900 p-2">
+                  <FileText className="h-5 w-5 text-cyan-300" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white">{file.name}</p>
+                  <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {/* Clear selected files when upload completes */}
+      {(!isUploading && uploadProgress === 0 && selectedFiles.length > 0) && (
+        <div className="mt-3 text-right">
+          <button
+            type="button"
+            onClick={() => setSelectedFiles([])}
+            className="text-sm font-semibold text-slate-400 hover:text-slate-200"
+          >
+            Clear
+          </button>
+        </div>
+      )}
     </section>
   )
 }

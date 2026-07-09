@@ -1,4 +1,5 @@
-import { Download, Eye, Trash2 } from 'lucide-react'
+import { Download, Eye, Trash2, File } from 'lucide-react'
+import EmptyState from './EmptyState'
 
 import type { DocumentStatus, UploadedDocument } from '../types/documents'
 
@@ -37,24 +38,28 @@ export default function DocumentsTable({ documents, onRemove }: DocumentsTablePr
           <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
-
         {documents.length === 0 ? (
-          <div className="px-4 py-10 text-center">
-            <p className="font-medium text-white">No documents uploaded</p>
-            <p className="mt-2 text-sm text-slate-500">Add a PDF to populate the table.</p>
-          </div>
+          <EmptyState title="No uploaded documents" description="Use the upload panel to add PDFs to your workspace. Files added here are stored in this browser session." />
         ) : (
           <div className="divide-y divide-slate-800">
             {documents.map((document) => (
               <article
                 key={document.id}
-                className="grid gap-3 px-4 py-4 lg:grid-cols-[1.5fr_0.85fr_0.65fr_0.75fr_0.9fr] lg:items-center"
+                className="group grid gap-3 px-4 py-4 lg:grid-cols-[1.5fr_0.85fr_0.65fr_0.75fr_0.9fr] lg:items-center hover:bg-slate-950/30"
+                title={document.fileName}
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-white">{document.fileName}</p>
-                  <p className="mt-1 text-xs text-slate-500 lg:hidden">
-                    {document.uploadDate} / {document.size}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-md bg-slate-900 p-2">
+                      <File className="h-5 w-5 text-cyan-300" aria-hidden />
+                    </div>
+                    <div>
+                      <p className="truncate font-medium text-white">{document.fileName}</p>
+                      <p className="mt-1 text-xs text-slate-500 lg:hidden">
+                        {document.uploadDate} • {document.size}
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <p className="hidden text-sm text-slate-400 lg:block">{document.uploadDate}</p>
                 <p className="hidden text-sm text-slate-400 lg:block">{document.size}</p>
@@ -67,14 +72,14 @@ export default function DocumentsTable({ documents, onRemove }: DocumentsTablePr
                   <button
                     type="button"
                     aria-label={`View ${document.fileName}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition-colors duration-150 group-hover:border-[#06B6D4]/60 group-hover:bg-[#06B6D4]/10 group-hover:text-[#67E8F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40"
                   >
                     <Eye aria-hidden="true" className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
                     aria-label={`Download ${document.fileName}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition-colors duration-150 group-hover:border-[#06B6D4]/60 group-hover:bg-[#06B6D4]/10 group-hover:text-[#67E8F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40"
                   >
                     <Download aria-hidden="true" className="h-4 w-4" />
                   </button>
@@ -82,7 +87,7 @@ export default function DocumentsTable({ documents, onRemove }: DocumentsTablePr
                     type="button"
                     aria-label={`Remove ${document.fileName}`}
                     onClick={() => onRemove(document.id)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-rose-400/60 hover:bg-rose-400/10 hover:text-rose-300"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition-colors duration-150 hover:border-rose-400/60 hover:bg-rose-400/10 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/30"
                   >
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
                   </button>

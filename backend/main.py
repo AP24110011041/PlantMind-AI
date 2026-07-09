@@ -1,6 +1,8 @@
 from pathlib import Path, PurePath
 import re
 import shutil
+import logging
+import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -10,13 +12,32 @@ from pydantic import BaseModel, Field
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
+# Configure basic logging for backend services
+log_level = os.getenv("LOG_LEVEL", "INFO").upper() if 'os' in globals() else "INFO"
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
 from services.chunk_service import ChunkService
 from services.embedding_service import EmbeddingService
 from services.pdf_service import PDFService
 from services.rag_service import RAGService
 from services.vector_store import VectorStore
+from routes.knowledge_graph import router as kg_router
+from routes.maintenance import router as maintenance_router
+from routes.compliance import router as compliance_router
+from routes.report import router as report_router
+from routes.analytics import router as analytics_router
 
 app = FastAPI()
+
+# Register knowledge graph routes
+app.include_router(kg_router)
+app.include_router(maintenance_router)
+app.include_router(compliance_router)
+app.include_router(report_router)
+app.include_router(analytics_router)
 
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -107,11 +128,14 @@ async def upload_document(file: UploadFile = File(...)):
     print(
         "[PDF Extraction] "
         f"filename={extraction['filename']} "
-        f"pages={extraction['pages']} "
+        f"pages={extraction['page_count']} "
         f"characters={extraction['characters']}"
     )
 
-    chunks = ChunkService.create_chunks(str(extraction["text"]))
+    chunks = ChunkService.create_chunks_from_pages(
+        extraction["pages"],
+        filename=target_path.name,
+    )
     embeddings = EmbeddingService.embed_chunks(chunks)
     store_result = VectorStore().add_documents(
         chunks,
@@ -131,7 +155,7 @@ async def upload_document(file: UploadFile = File(...)):
     return {
         "status": "uploaded",
         "filename": extraction["filename"],
-        "pages": extraction["pages"],
+        "pages": extraction["page_count"],
         "characters": extraction["characters"],
         "chunks_indexed": store_result["stored"],
     }

@@ -28,7 +28,7 @@ export default function QuickAction({
   onClick,
 }: QuickActionProps) {
   return (
-    <article className="rounded-lg border border-slate-800 bg-[#111827] p-5">
+    <article className="rounded-lg border border-slate-800 bg-[#111827] p-5 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-cyan-500/30">
       <div className="flex items-start gap-3">
         {Icon ? (
           <div className={`rounded-lg border p-2.5 ${actionStyles[tone]}`}>
@@ -43,9 +43,10 @@ export default function QuickAction({
       <button
         type="button"
         onClick={onClick}
-        className="mt-5 w-full rounded-md border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
+        aria-label={`${actionLabel} — ${title}`}
+        className="mt-5 w-full rounded-md border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 hover:border-[#06B6D4]/60 hover:bg-[#06B6D4]/10 hover:text-[#67E8F9]"
       >
-        {actionLabel} -&gt;
+        <span className="flex items-center justify-center gap-2">{actionLabel} <span aria-hidden>→</span></span>
       </button>
     </article>
   )

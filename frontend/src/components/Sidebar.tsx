@@ -41,6 +41,12 @@ const navigationItems: NavigationItem[] = [
     icon: FileText,
   },
   {
+    to: '/analytics',
+    label: 'Analytics',
+    description: 'Charts & trends',
+    icon: Activity,
+  },
+  {
     to: '/',
     label: 'Compliance',
     description: 'Dashboard metric only',

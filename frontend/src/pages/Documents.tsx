@@ -4,7 +4,6 @@ import { FileCheck2, Files, HardDrive, ShieldAlert } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import DocumentUploadDropzone from '../components/DocumentUploadDropzone'
 import DocumentsTable from '../components/DocumentsTable'
-import { uploadDocument } from '../services/documentsApi'
 import type { UploadedDocument } from '../types/documents'
 
 const initialDocuments: UploadedDocument[] = [
@@ -77,57 +76,45 @@ export default function Documents() {
     ['Indexed', 'Uploaded'].includes(document.status),
   ).length
 
+  // Simulate upload locally (do NOT connect to backend)
   const handleFilesSelected = async (files: File[]) => {
-    if (isUploading) {
-      return
-    }
+    if (isUploading || !files.length) return
 
     const now = new Date()
     const uploadedDocuments: UploadedDocument[] = []
 
     setIsUploading(true)
     setUploadProgress(0)
-    setUploadMessage({
-      type: 'info',
-      text: `Uploading ${files.length} PDF ${files.length === 1 ? 'file' : 'files'}...`,
-    })
+    setUploadMessage({ type: 'info', text: `Preparing ${files.length} file(s) for upload...` })
 
-    try {
-      for (const [index, file] of files.entries()) {
-        const response = await uploadDocument(file, (fileProgress) => {
-          const totalProgress = Math.round(((index + fileProgress / 100) / files.length) * 100)
-          setUploadProgress(totalProgress)
-        })
+    // Simulate per-file upload progress
+    for (const [index, file] of files.entries()) {
+      setUploadMessage({ type: 'info', text: `Uploading ${file.name} (${index + 1}/${files.length})` })
 
-        uploadedDocuments.push({
-          id: `uploaded-${now.getTime()}-${index}`,
-          fileName: response.filename,
-          uploadDate: formatUploadDate(now),
-          size: formatFileSize(file.size),
-          status: 'Uploaded',
-        })
+      // Simulate incremental progress
+      for (let p = 0; p <= 100; p += Math.floor(10 + Math.random() * 20)) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 120))
+        const overall = Math.min(100, Math.round(((index + p / 100) / files.length) * 100))
+        setUploadProgress(overall)
       }
 
-      setDocuments((currentDocuments) => [...uploadedDocuments, ...currentDocuments])
-      setUploadProgress(100)
-      setUploadMessage({
-        type: 'success',
-        text: `Uploaded ${uploadedDocuments.length} PDF ${
-          uploadedDocuments.length === 1 ? 'file' : 'files'
-        } successfully.`,
+      uploadedDocuments.push({
+        id: `uploaded-${now.getTime()}-${index}`,
+        fileName: file.name,
+        uploadDate: formatUploadDate(now),
+        size: formatFileSize(file.size),
+        status: 'Uploaded',
       })
-    } catch (error) {
-      if (uploadedDocuments.length > 0) {
-        setDocuments((currentDocuments) => [...uploadedDocuments, ...currentDocuments])
-      }
-
-      setUploadMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Upload failed.',
-      })
-    } finally {
-      setIsUploading(false)
     }
+
+    setDocuments((currentDocuments) => [...uploadedDocuments, ...currentDocuments])
+    setUploadProgress(100)
+    setUploadMessage({ type: 'success', text: `Added ${uploadedDocuments.length} file(s)` })
+    // brief pause so user sees completion
+    await new Promise((r) => setTimeout(r, 600))
+    setIsUploading(false)
+    setUploadProgress(0)
   }
 
   const handleRemoveDocument = (documentId: string) => {
