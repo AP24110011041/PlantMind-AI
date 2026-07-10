@@ -15,7 +15,7 @@ logger = logging.getLogger("plantmind.vectorstore")
 class VectorStore:
     DEFAULT_COLLECTION_NAME = "plantmind_chunks"
     DEFAULT_PERSIST_DIR = Path(__file__).resolve().parents[1] / "chroma_db"
-    TOP_K = 5
+    TOP_K = 10
 
     # cache PersistentClient and collection objects per (collection_name, persist_dir)
     _collection_cache: dict[tuple[str, str], tuple[Any, Any]] = {}

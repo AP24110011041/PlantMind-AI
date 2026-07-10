@@ -1,4 +1,4 @@
-from typing import Any, list
+from typing import Any
 import re
 import logging
 

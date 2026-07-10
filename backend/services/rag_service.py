@@ -15,16 +15,30 @@ class RAGService:
         question: str,
         vector_store: VectorStore | None = None,
     ) -> dict[str, Any]:
+
         clean_question = question.strip()
 
         if not clean_question:
-            raise HTTPException(status_code=400, detail="Question is required.")
+            raise HTTPException(
+                status_code=400,
+                detail="Question is required.",
+            )
 
+        # Generate embedding for the query
         query_embedding = EmbeddingService.embed_chunks(
-            [{"chunk_id": 1, "text": clean_question}]
+            [
+                {
+                    "chunk_id": 1,
+                    "text": clean_question,
+                }
+            ]
         )[0]["vector"]
 
-        search_results = (vector_store or VectorStore()).search(query_embedding, top_k=5)
+        # Retrieve candidate chunks
+        search_results = (vector_store or VectorStore()).search(
+            query_embedding,
+            top_k=8,
+        )
 
         if not search_results:
             raise HTTPException(
@@ -32,24 +46,67 @@ class RAGService:
                 detail="No indexed document chunks found. Upload a PDF before asking questions.",
             )
 
-        # Enrich & dedupe search results to improve retrieval quality
-        enriched = [RetrievalService.enrich_search_result(r) for r in search_results]
+        # Enrich results
+        enriched = [
+            RetrievalService.enrich_search_result(r)
+            for r in search_results
+        ]
+
+        # Remove duplicate chunks
         deduped = RetrievalService.dedupe_results(enriched)
 
         # Filter by similarity threshold
-        qualified = [r for r in deduped if r.get("similarity", 0.0) >= RetrievalService.min_similarity_threshold()]
+        qualified = [
+            r
+            for r in deduped
+            if r.get("similarity", 0.0)
+            >= RetrievalService.min_similarity_threshold()
+        ]
 
         if not qualified:
-            return {"answer": RetrievalService.INSUFFICIENT_EVIDENCE_MESSAGE, "citations": []}
+            return {
+                "answer": RetrievalService.INSUFFICIENT_EVIDENCE_MESSAGE,
+                "citations": [],
+                "confidence": 0.0,
+            }
 
-        # Sort by confidence then similarity
-        qualified.sort(key=lambda x: (x.get("high_confidence", False), x.get("similarity", 0.0)), reverse=True)
+        # Keep highest similarity first
+        qualified.sort(
+            key=lambda x: x.get("similarity", 0.0),
+            reverse=True,
+        )
 
-        citations = [RetrievalService.build_citation(i + 1, r) for i, r in enumerate(qualified)]
+        # Keep only top 5 most relevant chunks
+        qualified = qualified[:5]
 
-        # Call LLM with citations and also return a simple confidence metric (max similarity)
-        answer = LLMService.generate_answer(clean_question, citations)
+        # Reorder for readability
+        qualified.sort(
+            key=lambda x: (
+                x.get("page_number", 0),
+                x.get("chunk_id", 0),
+            )
+        )
 
-        confidence_score = max((c.get("similarity") or 0.0) for c in qualified) if qualified else 0.0
+        # Build citations
+        citations = [
+            RetrievalService.build_citation(i + 1, r)
+            for i, r in enumerate(qualified)
+        ]
 
-        return {"answer": answer, "citations": citations, "confidence": round(confidence_score, 3)}
+        # Generate answer
+        answer = LLMService.generate_answer(
+            clean_question,
+            citations,
+        )
+
+        # Confidence = best similarity score
+        confidence_score = max(
+            r.get("similarity", 0.0)
+            for r in qualified
+        )
+
+        return {
+            "answer": answer,
+            "citations": citations,
+            "confidence": round(confidence_score, 3),
+        }

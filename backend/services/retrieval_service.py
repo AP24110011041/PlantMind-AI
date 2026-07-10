@@ -4,125 +4,190 @@ from typing import Any
 
 
 class RetrievalService:
-    """Reusable helpers for vector search scoring, filtering, and citation formatting."""
+    """Utilities for retrieval scoring, filtering, deduplication, and citations."""
 
-    DEFAULT_MIN_SIMILARITY = 0.35
+    DEFAULT_MIN_SIMILARITY = 0.30
+
     INSUFFICIENT_EVIDENCE_MESSAGE = (
         "I couldn't find enough evidence in the uploaded documents."
     )
-    # Minimum similarity above which citations are considered high confidence
-    HIGH_CONFIDENCE_THRESHOLD = float(os.getenv("RAG_HIGH_CONFIDENCE", "0.8"))
+
+    HIGH_CONFIDENCE_THRESHOLD = float(
+        os.getenv("RAG_HIGH_CONFIDENCE", "0.8")
+    )
 
     @staticmethod
     def cosine_similarity_from_distance(distance: float | None) -> float:
         if distance is None:
             return 0.0
 
-        return max(0.0, min(1.0, 1.0 - float(distance)))
+        similarity = 1.0 - float(distance)
+
+        return max(0.0, min(1.0, similarity))
 
     @classmethod
     def min_similarity_threshold(cls) -> float:
-        raw_value = os.getenv("RAG_MIN_SIMILARITY", str(cls.DEFAULT_MIN_SIMILARITY)).strip()
-
         try:
-            threshold = float(raw_value)
-        except ValueError:
+            threshold = float(
+                os.getenv(
+                    "RAG_MIN_SIMILARITY",
+                    str(cls.DEFAULT_MIN_SIMILARITY),
+                )
+            )
+        except Exception:
             threshold = cls.DEFAULT_MIN_SIMILARITY
 
         return max(0.0, min(1.0, threshold))
 
     @classmethod
-    def enrich_search_result(cls, result: dict[str, Any]) -> dict[str, Any]:
-        metadata = result.get("metadata") or {}
-        similarity = cls.cosine_similarity_from_distance(result.get("distance"))
-        filename = metadata.get("filename") or result.get("filename") or "Unknown"
-        page_number = metadata.get("page_number", result.get("page_number"))
-        # Calculate a normalized confidence score (0.0-1.0)
-        confidence = round(float(similarity), 3) if similarity is not None else 0.0
+    def enrich_search_result(
+        cls,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
 
-        # Flag high-confidence matches for later use in prompts or UI
-        high_confidence = confidence >= cls.HIGH_CONFIDENCE_THRESHOLD
+        metadata = result.get("metadata") or {}
+
+        similarity = cls.cosine_similarity_from_distance(
+            result.get("distance")
+        )
+
+        confidence = round(similarity, 3)
 
         return {
             **result,
             "similarity": similarity,
             "confidence": confidence,
-            "high_confidence": high_confidence,
-            "filename": filename,
-            "page_number": page_number,
-            "section_title": metadata.get("section_title", result.get("section_title", "")),
+            "high_confidence": confidence >= cls.HIGH_CONFIDENCE_THRESHOLD,
+            "filename": metadata.get(
+                "filename",
+                result.get("filename", "Unknown"),
+            ),
+            "page_number": metadata.get(
+                "page_number",
+                result.get("page_number"),
+            ),
+            "section_title": metadata.get(
+                "section_title",
+                result.get("section_title", ""),
+            ),
+            "chunk_id": metadata.get(
+                "chunk_id",
+                result.get("chunk_id"),
+            ),
         }
 
     @classmethod
-    def filter_by_similarity(cls, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def filter_by_similarity(
+        cls,
+        results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+
         threshold = cls.min_similarity_threshold()
 
-        return [
-            enriched
-            for result in results
-            if (enriched := cls.enrich_search_result(result))["similarity"] >= threshold
-        ]
+        filtered = []
+
+        for result in results:
+
+            enriched = cls.enrich_search_result(result)
+
+            if enriched["similarity"] >= threshold:
+                filtered.append(enriched)
+
+        return filtered
 
     @staticmethod
-    def format_citation_label(filename: str, page_number: int | None) -> str:
-        if page_number is not None and int(page_number) > 0:
-            return f"{filename}\nPage {int(page_number)}"
+    def format_citation_label(
+        filename: str,
+        page_number: int | None,
+    ) -> str:
+
+        if page_number:
+            return f"{filename}\nPage {page_number}"
 
         return filename
 
     @staticmethod
-    def format_inline_citation(filename: str, page_number: int | None) -> str:
-        if page_number is not None and int(page_number) > 0:
-            return f"{filename}, Page {int(page_number)}"
+    def format_inline_citation(
+        filename: str,
+        page_number: int | None,
+    ) -> str:
+
+        if page_number:
+            return f"{filename}, Page {page_number}"
 
         return filename
 
     @classmethod
-    def dedupe_results(cls, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Deduplicate search results by (filename, page_number, section_title) keeping the highest similarity."""
-        seen: dict[tuple[str, int | None, str], dict[str, Any]] = {}
+    def dedupe_results(
+        cls,
+        results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """
+        Keep every unique chunk.
 
-        for res in results:
+        Previous implementation removed different chunks from the
+        same page because they had the same page number.
+
+        We now deduplicate using chunk_id.
+        """
+
+        unique = {}
+
+        for result in results:
+
+            enriched = cls.enrich_search_result(result)
+
             key = (
-                str(res.get("filename") or "Unknown"),
-                res.get("page_number"),
-                str(res.get("section_title") or ""),
+                enriched["filename"],
+                enriched["chunk_id"],
             )
 
-            existing = seen.get(key)
-            if not existing:
-                seen[key] = res
-                continue
+            existing = unique.get(key)
 
-            # keep the one with higher similarity
-            if float(res.get("similarity", 0.0)) > float(existing.get("similarity", 0.0)):
-                seen[key] = res
+            if (
+                existing is None
+                or enriched["similarity"] > existing["similarity"]
+            ):
+                unique[key] = enriched
 
-        return list(seen.values())
+        return sorted(
+            unique.values(),
+            key=lambda x: x["similarity"],
+            reverse=True,
+        )
 
     @classmethod
-    def build_citation(cls, index: int, result: dict[str, Any]) -> dict[str, Any]:
-        enriched = cls.enrich_search_result(result)
-        filename = str(enriched.get("filename") or "Unknown")
-        page_number = enriched.get("page_number")
-        normalized_page = int(page_number) if page_number is not None else None
+    def build_citation(
+        cls,
+        index: int,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
 
-        if normalized_page is not None and normalized_page <= 0:
-            normalized_page = None
+        enriched = cls.enrich_search_result(result)
 
         return {
             "source_id": index,
-            "filename": filename,
-            "page_number": normalized_page,
-            "chunk_id": enriched.get("chunk_id"),
-            "section_title": enriched.get("section_title") or "",
-            "text": enriched.get("text", ""),
-            "similarity": enriched.get("similarity"),
-            "distance": enriched.get("distance"),
-            "citation_label": cls.format_citation_label(filename, normalized_page),
+            "filename": enriched["filename"],
+            "page_number": enriched["page_number"],
+            "chunk_id": enriched["chunk_id"],
+            "section_title": enriched["section_title"],
+            "text": enriched["text"],
+            "similarity": enriched["similarity"],
+            "distance": enriched["distance"],
+            "citation_label": cls.format_citation_label(
+                enriched["filename"],
+                enriched["page_number"],
+            ),
         }
 
     @staticmethod
     def split_sentences(text: str) -> list[str]:
-        parts = re.split(r"(?<=[.!?])\s+", text.strip())
-        return [part.strip() for part in parts if part.strip()]
+
+        return [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                text.strip(),
+            )
+            if sentence.strip()
+        ]
