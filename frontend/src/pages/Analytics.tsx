@@ -1,101 +1,112 @@
-import { useEffect, useState } from 'react'
-import { get } from 'axios'
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 type Analytics = {
-  documents_uploaded: number
-  documents_trend: Record<string, number>
-  chunks_indexed: number
-  plant_health: Array<{ asset: string; risk_score: number | null; confidence: number | null }>
-  compliance_scores: Array<{ asset: string; compliance_score: number | null }>
-  ai_usage: Record<string, any>
-}
+  total_documents: number;
+  indexed_documents: number;
+  uploaded_documents: number;
+  total_pages: number;
+  total_chunks: number;
+  average_chunks_per_document: number;
+  total_storage: string;
+};
 
-function SmallStat({ label, value }: { label: string; value: string | number }) {
+function SmallStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold text-stone-500">{label}</p>
       <p className="mt-2 text-2xl font-bold text-stone-900">{value}</p>
     </div>
-  )
+  );
 }
 
 export default function Analytics() {
-  const [data, setData] = useState<Analytics | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<Analytics | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true)
-    get('/analytics')
-      .then((r) => setData(r.data))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
-  }, [])
+    async function loadAnalytics() {
+      try {
+        const response = await axios.get(
+          "http://127.0.0.1:8080/analytics"
+        );
+        setData(response.data);
+      } catch (err) {
+        console.error("Analytics Error:", err);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  if (loading) return <div>Loading analytics…</div>
-  if (!data) return <div>Failed to load analytics.</div>
+    loadAnalytics();
+  }, []);
 
-  const trendEntries = Object.entries(data.documents_trend || {})
+  if (loading) {
+    return <div className="p-8">Loading analytics...</div>;
+  }
+
+  if (!data) {
+    return (
+      <div className="p-8 text-red-500">
+        Failed to load analytics.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+  <div>
+    <h1 className="text-3xl font-bold text-stone-900">
+      Analytics Dashboard
+    </h1>
+
+    <p className="mt-2 text-stone-500">
+      Live analytics from the PlantMind AI backend.
+    </p>
+  </div>
       <div className="grid grid-cols-4 gap-4">
-        <SmallStat label="Documents" value={data.documents_uploaded} />
-        <SmallStat label="Chunks Indexed" value={data.chunks_indexed} />
-        <SmallStat label="AI Requests" value={data.ai_usage.requests ?? '—'} />
-        <SmallStat label="Avg Compliance" value={(data.compliance_scores.length && Math.round((data.compliance_scores.reduce((s, c) => s + (c.compliance_score || 0), 0) / data.compliance_scores.length) * 10) / 10) || '—'} />
+        <SmallStat label="Documents" value={data.total_documents} />
+        <SmallStat label="Indexed" value={data.indexed_documents} />
+        <SmallStat label="Uploaded" value={data.uploaded_documents} />
+        <SmallStat label="Storage" value={data.total_storage} />
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold">Documents Trend (last 14 days)</h3>
-        <div className="mt-4 h-36 w-full">
-          <svg width="100%" height="100%" viewBox="0 0 700 150">
-            {trendEntries.map(([date, count], i) => {
-              const x = 20 + i * (660 / Math.max(1, trendEntries.length - 1))
-              const h = Math.min(120, count * 20)
-              return (
-                <g key={date}>
-                  <rect x={x} y={140 - h} width={12} height={h} fill="#06B6D4" />
-                </g>
-              )
-            })}
-          </svg>
-        </div>
-      </section>
+        <h2 className="text-xl font-bold">Document Metrics</h2>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold">Plant Health (sampled)</h3>
-        <div className="mt-4 space-y-3">
-          {data.plant_health.map((p) => (
-            <div key={p.asset} className="flex items-center justify-between rounded border p-3">
-              <div>
-                <p className="font-semibold">{p.asset}</p>
-                <p className="text-xs text-stone-500">Confidence: {p.confidence ?? '—'}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{p.risk_score ?? '—'}</p>
-                <p className="text-xs text-stone-500">Risk score (0-100)</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <SmallStat
+  label="Index Success"
+  value={
+    data.total_documents
+      ? `${Math.round(
+          (data.indexed_documents / data.total_documents) * 100
+        )}%`
+      : "0%"
+  }
+/>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold">Compliance Scores (sampled)</h3>
-        <div className="mt-4 space-y-3">
-          {data.compliance_scores.map((c) => (
-            <div key={c.asset} className="flex items-center justify-between rounded border p-3">
-              <div>
-                <p className="font-semibold">{c.asset}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{c.compliance_score ?? '—'}</p>
-                <p className="text-xs text-stone-500">Compliance score (0-100)</p>
-              </div>
-            </div>
-          ))}
+<SmallStat
+  label="Pending Review"
+  value={data.uploaded_documents}
+/>
+
+<SmallStat
+  label="System Status"
+  value="Healthy"
+/>
+          <SmallStat label="Total Pages" value={data.total_pages} />
+          <SmallStat label="Total Chunks" value={data.total_chunks} />
+          <SmallStat label="Avg Chunks / Document" value={data.average_chunks_per_document} />
         </div>
       </section>
     </div>
-  )
+  );
 }

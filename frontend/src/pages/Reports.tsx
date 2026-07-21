@@ -1,75 +1,110 @@
+import { useEffect, useState } from 'react'
+
 import DashboardCard from '../components/DashboardCard'
 
-const reportBars = [
-  { label: 'Availability', value: '96%', width: '96%' },
-  { label: 'Performance', value: '88%', width: '88%' },
-  { label: 'Quality', value: '93%', width: '93%' },
-  { label: 'Energy Efficiency', value: '79%', width: '79%' },
-]
-
-const reports = [
-  { name: 'Daily Plant Brief', audience: 'Operations', schedule: 'Every shift' },
-  { name: 'Compliance Evidence Pack', audience: 'Leadership', schedule: 'Monthly' },
-  { name: 'Reliability Risk Digest', audience: 'Maintenance', schedule: 'Weekly' },
-]
+type ReportsStats = {
+  total_pdfs: number
+  total_pages: number
+  total_chunks: number
+  indexed_documents: number
+  failed_documents: number
+  upload_dates: string[]
+}
 
 export default function Reports() {
+  const [stats, setStats] = useState<ReportsStats>({
+    total_pdfs: 0,
+    total_pages: 0,
+    total_chunks: 0,
+    indexed_documents: 0,
+    failed_documents: 0,
+    upload_dates: [],
+  })
+
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8080/reports')
+        if (!response.ok) {
+          throw new Error('Failed to load reports')
+        }
+
+        const data = (await response.json()) as ReportsStats
+        setStats(data)
+      } catch {
+        setStats({
+          total_pdfs: 0,
+          total_pages: 0,
+          total_chunks: 0,
+          indexed_documents: 0,
+          failed_documents: 0,
+          upload_dates: [],
+        })
+      }
+    }
+
+    void loadReports()
+  }, [])
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <DashboardCard
-          title="OEE"
-          value="89.1%"
-          detail="Overall equipment effectiveness across production-critical lines."
-          trend="+2.1%"
+          title="Total PDFs"
+          value={String(stats.total_pdfs)}
+          detail="PDF documents available in the workspace."
+          tone="cyan"
+        />
+        <DashboardCard
+          title="Total Pages"
+          value={String(stats.total_pages)}
+          detail="Pages extracted from uploaded PDF files."
           tone="green"
         />
         <DashboardCard
-          title="Energy per Unit"
-          value="4.8 kWh"
-          detail="Average energy usage normalized to current production output."
-          tone="amber"
-        />
-        <DashboardCard
-          title="AI Briefs Sent"
-          value="36"
-          detail="Automated summaries generated for shift, maintenance, and leadership teams."
+          title="Total Chunks"
+          value={String(stats.total_chunks)}
+          detail="Text chunks generated for retrieval indexing."
           tone="blue"
         />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-stone-950">Performance Breakdown</h2>
+          <h2 className="text-lg font-semibold text-stone-950">Document Coverage</h2>
           <p className="mt-1 text-sm text-stone-500">
-            Current reporting metrics prepared for the leadership dashboard.
+            Current ingestion and indexing status for uploaded PDF files.
           </p>
 
           <div className="mt-5 space-y-4">
-            {reportBars.map((metric) => (
-              <div key={metric.label}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-stone-800">{metric.label}</span>
-                  <span className="text-stone-500">{metric.value}</span>
-                </div>
-                <div className="mt-2 h-3 rounded-full bg-stone-100">
-                  <div className="h-3 rounded-full bg-sky-500" style={{ width: metric.width }} />
-                </div>
-              </div>
-            ))}
+            <div className="flex items-center justify-between rounded-md border border-stone-100 bg-stone-50 px-3 py-3">
+              <span className="font-medium text-stone-800">Indexed Documents</span>
+              <span className="text-stone-700">{stats.indexed_documents}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-stone-100 bg-stone-50 px-3 py-3">
+              <span className="font-medium text-stone-800">Failed Documents</span>
+              <span className="text-stone-700">{stats.failed_documents}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-stone-100 bg-stone-50 px-3 py-3">
+              <span className="font-medium text-stone-800">Upload Dates</span>
+              <span className="text-stone-700">{stats.upload_dates.length}</span>
+            </div>
           </div>
         </div>
 
         <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-stone-950">Scheduled Reports</h2>
+          <h2 className="text-lg font-semibold text-stone-950">Upload Timeline</h2>
           <div className="mt-4 space-y-3">
-            {reports.map((report) => (
-              <article key={report.name} className="rounded-md border border-stone-200 p-3">
-                <h3 className="font-semibold text-stone-950">{report.name}</h3>
-                <p className="mt-1 text-sm text-stone-500">Audience: {report.audience}</p>
-                <p className="text-sm text-stone-500">Schedule: {report.schedule}</p>
-              </article>
-            ))}
+            {stats.upload_dates.length === 0 ? (
+              <p className="text-sm text-stone-500">No upload dates available yet.</p>
+            ) : (
+              stats.upload_dates.map((date) => (
+                <article key={date} className="rounded-md border border-stone-200 p-3">
+                  <h3 className="font-semibold text-stone-950">{date}</h3>
+                  <p className="mt-1 text-sm text-stone-500">Document uploaded on this date.</p>
+                </article>
+              ))
+            )}
           </div>
         </div>
       </section>

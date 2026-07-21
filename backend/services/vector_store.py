@@ -15,7 +15,7 @@ logger = logging.getLogger("plantmind.vectorstore")
 class VectorStore:
     DEFAULT_COLLECTION_NAME = "plantmind_chunks"
     DEFAULT_PERSIST_DIR = Path(__file__).resolve().parents[1] / "chroma_db"
-    TOP_K = 10
+    TOP_K = 8
 
     # cache PersistentClient and collection objects per (collection_name, persist_dir)
     _collection_cache: dict[tuple[str, str], tuple[Any, Any]] = {}
@@ -45,6 +45,12 @@ class VectorStore:
         self.collection = collection
         self._collection_cache[key] = (self.client, self.collection)
         logger.info("Created chroma client and collection '%s' at %s", collection_name, persist_dir_str)
+
+        # TEMP DEBUG — remove once the mismatch is diagnosed
+        print(
+            f"[VECTORSTORE INIT] pid={os.getpid()} persist_dir={persist_dir_str} "
+            f"collection={collection_name} count={collection.count()}"
+        )
 
     @staticmethod
     def _validate_chunks(chunks: list[dict[str, Any]]) -> None:
@@ -196,6 +202,38 @@ class VectorStore:
         logger.info("Upserted %d chunk(s) into collection %s", len(stored_ids), self.collection.name)
         return {"stored": len(stored_ids), "ids": stored_ids}
 
+    def delete_document(self, document_id: str) -> int:
+        try:
+            results = self.collection.get(include=["metadatas"])
+            ids = results.get("ids") or []
+            metadatas = results.get("metadatas") or []
+        except Exception:
+            return 0
+
+        if isinstance(ids, list) and ids and isinstance(ids[0], list):
+            ids = [item for group in ids for item in group]
+        else:
+            ids = list(ids)
+
+        if isinstance(metadatas, list) and metadatas and isinstance(metadatas[0], list):
+            metadatas = [metadata for group in metadatas for metadata in group]
+        else:
+            metadatas = list(metadatas)
+
+        matching_ids: list[str] = []
+        for entry_id, metadata in zip(ids, metadatas, strict=False):
+            if not isinstance(metadata, dict):
+                continue
+
+            metadata_document_id = metadata.get("document_id") or metadata.get("filename")
+            if isinstance(metadata_document_id, str) and metadata_document_id == document_id:
+                matching_ids.append(entry_id)
+
+        if matching_ids:
+            self.collection.delete(ids=matching_ids)
+
+        return len(matching_ids)
+
     def search(
         self,
         query_embedding: list[float],
@@ -208,6 +246,13 @@ class VectorStore:
             raise HTTPException(status_code=400, detail="top_k must be greater than zero.")
 
         stored_count = self.collection.count()
+
+        # TEMP DEBUG — remove once the mismatch is diagnosed
+        print(
+            f"[VECTORSTORE SEARCH] pid={os.getpid()} collection={self.collection.name} "
+            f"count={stored_count}"
+        )
+
         if stored_count == 0:
             return []
 

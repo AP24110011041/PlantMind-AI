@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 import DashboardCard from '../components/DashboardCard'
 
 const controls = [
@@ -14,26 +16,62 @@ const statusStyles: Record<string, string> = {
 }
 
 export default function Compliance() {
+  const [stats, setStats] = useState({
+    indexed_documents: 0,
+    uploaded_documents: 0,
+    failed_uploads: 0,
+    documents_needing_review: 0,
+  })
+
+  useEffect(() => {
+    const loadComplianceStats = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8080/compliance')
+        if (!response.ok) {
+          throw new Error('Failed to load compliance stats')
+        }
+
+        const data = (await response.json()) as typeof stats
+        setStats(data)
+      } catch {
+        setStats({
+          indexed_documents: 0,
+          uploaded_documents: 0,
+          failed_uploads: 0,
+          documents_needing_review: 0,
+        })
+      }
+    }
+
+    void loadComplianceStats()
+  }, [])
+
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         <DashboardCard
-          title="Audit Readiness"
-          value="84%"
-          detail="Controls with current evidence, owners, and acceptable document freshness."
+          title="Indexed Documents"
+          value={String(stats.indexed_documents)}
+          detail="PDFs successfully indexed into the retrieval store."
           tone="green"
         />
         <DashboardCard
-          title="Evidence Gaps"
-          value="12"
-          detail="Open items requiring updated files, signatures, or asset mapping."
-          tone="amber"
+          title="Uploaded Documents"
+          value={String(stats.uploaded_documents)}
+          detail="Documents that are present but still awaiting indexing."
+          tone="cyan"
         />
         <DashboardCard
-          title="Critical Findings"
-          value="2"
-          detail="High-severity issues that need closure before the next audit window."
+          title="Failed Uploads"
+          value={String(stats.failed_uploads)}
+          detail="Uploads that did not complete successfully."
           tone="rose"
+        />
+        <DashboardCard
+          title="Needs Review"
+          value={String(stats.documents_needing_review)}
+          detail="Documents flagged for follow-up review."
+          tone="amber"
         />
       </section>
 
@@ -55,11 +93,12 @@ export default function Compliance() {
                 {control.status}
               </span>
               <button
-                type="button"
-                className="rounded-md border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-              >
-                View evidence
-              </button>
+  type="button"
+  onClick={() => window.open("http://127.0.0.1:8080/documents", "_blank")}
+  className="rounded-md border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+>
+  View Evidence
+</button>
             </div>
           ))}
         </div>

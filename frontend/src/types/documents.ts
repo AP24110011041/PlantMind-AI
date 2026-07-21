@@ -1,4 +1,4 @@
-export type DocumentStatus = 'Indexed' | 'Uploaded' | 'Processing' | 'Needs Review'
+export type DocumentStatus = 'Indexed' | 'Uploaded' | 'Processing' | 'Needs Review' | 'Failed'
 
 export type UploadedDocument = {
   id: string

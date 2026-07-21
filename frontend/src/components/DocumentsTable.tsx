@@ -1,11 +1,14 @@
-import { Download, Eye, Trash2, File } from 'lucide-react'
+import { Download, Eye, Trash2, File, Bot } from 'lucide-react'
 import EmptyState from './EmptyState'
 
 import type { DocumentStatus, UploadedDocument } from '../types/documents'
 
 type DocumentsTableProps = {
   documents: UploadedDocument[]
+  onPreview: (documentId: string) => void
+  onDownload: (documentId: string) => void
   onRemove: (documentId: string) => void
+  onSummarize: (document: UploadedDocument) => void
 }
 
 const statusStyles: Record<DocumentStatus, string> = {
@@ -15,7 +18,13 @@ const statusStyles: Record<DocumentStatus, string> = {
   'Needs Review': 'border-amber-400/25 bg-amber-400/10 text-amber-300',
 }
 
-export default function DocumentsTable({ documents, onRemove }: DocumentsTableProps) {
+export default function DocumentsTable({
+  documents,
+  onPreview,
+  onDownload,
+  onRemove,
+  onSummarize,
+}: DocumentsTableProps) {
   return (
     <section className="rounded-lg border border-slate-800 bg-[#111827] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -72,6 +81,7 @@ export default function DocumentsTable({ documents, onRemove }: DocumentsTablePr
                   <button
                     type="button"
                     aria-label={`View ${document.fileName}`}
+                    onClick={() => onPreview(document.id)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition-colors duration-150 group-hover:border-[#06B6D4]/60 group-hover:bg-[#06B6D4]/10 group-hover:text-[#67E8F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40"
                   >
                     <Eye aria-hidden="true" className="h-4 w-4" />
@@ -79,10 +89,19 @@ export default function DocumentsTable({ documents, onRemove }: DocumentsTablePr
                   <button
                     type="button"
                     aria-label={`Download ${document.fileName}`}
+                    onClick={() => onDownload(document.id)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition-colors duration-150 group-hover:border-[#06B6D4]/60 group-hover:bg-[#06B6D4]/10 group-hover:text-[#67E8F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40"
                   >
                     <Download aria-hidden="true" className="h-4 w-4" />
                   </button>
+                  <button
+  type="button"
+  aria-label={`Summarize ${document.fileName}`}
+  onClick={() => onSummarize(document)}
+  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 text-cyan-300 transition-colors duration-150 hover:border-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-200"
+>
+  <Bot className="h-4 w-4" />
+</button>
                   <button
                     type="button"
                     aria-label={`Remove ${document.fileName}`}

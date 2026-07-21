@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bell, Menu, Search, ShieldCheck, UserCircle } from 'lucide-react'
 
 type NavbarProps = {
@@ -7,6 +9,9 @@ type NavbarProps = {
 }
 
 export default function Navbar({ pageTitle, pageSubtitle, onMenuToggle }: NavbarProps) {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+
   return (
     <header className="sticky top-0 z-10 border-b border-slate-800 bg-[#020617]/90 backdrop-blur-xl">
       <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -33,13 +38,18 @@ export default function Navbar({ pageTitle, pageSubtitle, onMenuToggle }: Navbar
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <span className="hidden items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-300 md:inline-flex">
+            <button
+  type="button"
+  onClick={() => navigate("/settings")}
+  className="hidden items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/20 md:inline-flex"
+>
               <ShieldCheck aria-hidden="true" className="h-4 w-4" />
               System healthy
-            </span>
+            </button>
             <button
               type="button"
               aria-label="Notifications"
+              onClick={() => navigate("/alerts")}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 bg-[#111827] text-slate-300 transition hover:border-[#06B6D4]/50 hover:text-[#67E8F9]"
             >
               <Bell aria-hidden="true" className="h-5 w-5" />
@@ -47,6 +57,8 @@ export default function Navbar({ pageTitle, pageSubtitle, onMenuToggle }: Navbar
             <button
               type="button"
               aria-label="User profile"
+              onClick={() => navigate("/settings")}
+
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 bg-[#111827] text-slate-300 transition hover:border-[#06B6D4]/50 hover:text-[#67E8F9]"
             >
               <UserCircle aria-hidden="true" className="h-5 w-5" />
@@ -64,23 +76,38 @@ export default function Navbar({ pageTitle, pageSubtitle, onMenuToggle }: Navbar
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
             />
             <input
-              id="workspace-search"
-              type="search"
-              placeholder="Search documents, controls, alerts..."
-              className="w-full rounded-lg border border-slate-800 bg-[#111827] py-2.5 pl-10 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-[#06B6D4]/70 focus:ring-2 focus:ring-[#06B6D4]/15"
-            />
+  id="workspace-search"
+  type="search"
+  placeholder="Search documents, controls, alerts..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' && search.trim()) {
+      navigate('/assistant', {
+        state: {
+          question: search,
+        },
+      })
+    }
+  }}
+  className="w-full rounded-lg border border-slate-800 bg-[#111827] py-2.5 pl-10 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-[#06B6D4]/70 focus:ring-2 focus:ring-[#06B6D4]/15"
+/>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-300">
-            <span className="rounded-full border border-slate-800 bg-[#111827] px-2.5 py-1">
-              1,284 docs indexed
-            </span>
-            <span className="rounded-full border border-slate-800 bg-[#111827] px-2.5 py-1">
-              96.8% uptime
-            </span>
-            <span className="rounded-full border border-rose-400/25 bg-rose-400/10 px-2.5 py-1 text-rose-300">
-              7 active alerts
-            </span>
-          </div>
+          <div className="flex flex-wrap gap-2 text-xs font-medium">
+
+  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+    🟢 Live Backend
+  </span>
+
+  <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-cyan-300">
+    ⚡ FastAPI Connected
+  </span>
+
+  <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-purple-300">
+    🤖 AI Ready
+  </span>
+
+</div>
         </div>
       </div>
     </header>

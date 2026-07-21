@@ -47,11 +47,10 @@ const navigationItems: NavigationItem[] = [
     icon: Activity,
   },
   {
-    to: '/',
-    label: 'Compliance',
-    description: 'Dashboard metric only',
-    icon: ShieldCheck,
-    disabled: true,
+  to: '/compliance',
+  label: 'Compliance',
+  description: 'AI compliance analysis',
+  icon: ShieldCheck,
   },
   {
     to: '/assistant',
@@ -60,11 +59,16 @@ const navigationItems: NavigationItem[] = [
     icon: Bot,
   },
   {
-    to: '/',
-    label: 'Alerts',
-    description: 'Dashboard metric only',
-    icon: AlertTriangle,
-    disabled: true,
+  to: '/alerts',
+  label: 'Alerts',
+  description: 'AI generated alerts',
+  icon: AlertTriangle,
+  },
+  {
+  to: "/settings",
+  label: "Settings",
+  description: "Workspace settings",
+  icon: Settings,
   },
 ]
 
@@ -78,21 +82,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#06B6D4] text-slate-950 shadow-lg shadow-[#06B6D4]/20">
-            <Activity aria-hidden="true" className="h-5 w-5" />
+            <ShieldCheck aria-hidden="true" className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-semibold text-white">PlantMind AI</p>
-            <p className="text-xs text-slate-500">Asset & Ops Brain</p>
+            <p className="font-semibold text-white">Veritas AI</p>
+            <p className="text-xs text-slate-500">
+  Agentic AI Platform
+</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close navigation"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-300 transition hover:border-[#06B6D4]/50 lg:hidden"
-        >
-          <MenuSquare aria-hidden="true" className="h-4 w-4" />
-        </button>
+        
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
@@ -171,20 +170,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </p>
         <div className="mt-3 rounded-lg border border-slate-800 bg-[#111827] p-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-300">ET AI Hackathon</span>
-            <span className="font-semibold text-[#67E8F9]">Demo</span>
+            <span className="text-slate-300">
+  Veritas AI
+</span>
+            <span className="font-semibold text-[#67E8F9]">
+  Production
+</span><span className="font-semibold text-[#67E8F9]">Demo</span>
           </div>
           <p className="mt-2 text-xs leading-5 text-slate-500">
-            Dashboard, Documents, and AI Assistant are active.
-          </p>
+  Enterprise AI for document verification, semantic search, and compliance intelligence.
+</p>
         </div>
-        <button
-          type="button"
+        <NavLink
+  to="/settings"
           className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-[#06B6D4]/50 hover:text-[#67E8F9]"
         >
           <Settings aria-hidden="true" className="h-4 w-4" />
           Settings
-        </button>
+        </NavLink>
       </div>
     </aside>
   )

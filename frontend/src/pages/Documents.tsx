@@ -1,34 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FileCheck2, Files, HardDrive, ShieldAlert } from 'lucide-react'
 
 import DashboardCard from '../components/DashboardCard'
 import DocumentUploadDropzone from '../components/DocumentUploadDropzone'
 import DocumentsTable from '../components/DocumentsTable'
+import { deleteDocument, getDocumentDownloadUrl, getDocumentFileUrl, getDocuments, uploadDocument } from '../services/documentsApi'
 import type { UploadedDocument } from '../types/documents'
-
-const initialDocuments: UploadedDocument[] = [
-  {
-    id: 'doc-001',
-    fileName: 'Boiler Startup SOP.pdf',
-    uploadDate: 'Jul 09, 2026',
-    size: '2.4 MB',
-    status: 'Indexed',
-  },
-  {
-    id: 'doc-002',
-    fileName: 'Compressor C-12 Maintenance Manual.pdf',
-    uploadDate: 'Jul 08, 2026',
-    size: '8.9 MB',
-    status: 'Needs Review',
-  },
-  {
-    id: 'doc-003',
-    fileName: 'Quarterly Safety Audit Evidence.pdf',
-    uploadDate: 'Jul 07, 2026',
-    size: '5.1 MB',
-    status: 'Indexed',
-  },
-]
 
 type UploadMessage = {
   type: 'success' | 'error' | 'info'
@@ -57,10 +35,33 @@ const formatUploadDate = (date: Date) =>
   }).format(date)
 
 export default function Documents() {
-  const [documents, setDocuments] = useState<UploadedDocument[]>(initialDocuments)
+  const [documents, setDocuments] = useState<UploadedDocument[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadMessage, setUploadMessage] = useState<UploadMessage | null>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const backendDocuments = await getDocuments()
+
+        const mappedDocuments: UploadedDocument[] = backendDocuments.map((document) => ({
+          id: document.id,
+          fileName: document.filename,
+          uploadDate: document.uploadDate,
+          size: document.size,
+          status: document.status,
+        }))
+
+        setDocuments(mappedDocuments)
+      } catch {
+        setUploadMessage({ type: 'error', text: 'Unable to load documents from the backend.' })
+      }
+    }
+
+    void loadDocuments()
+  }, [])
 
   const storageUsed = useMemo(() => {
     const totalMegabytes = documents.reduce((total, document) => {
@@ -76,7 +77,6 @@ export default function Documents() {
     ['Indexed', 'Uploaded'].includes(document.status),
   ).length
 
-  // Simulate upload locally (do NOT connect to backend)
   const handleFilesSelected = async (files: File[]) => {
     if (isUploading || !files.length) return
 
@@ -87,40 +87,96 @@ export default function Documents() {
     setUploadProgress(0)
     setUploadMessage({ type: 'info', text: `Preparing ${files.length} file(s) for upload...` })
 
-    // Simulate per-file upload progress
-    for (const [index, file] of files.entries()) {
-      setUploadMessage({ type: 'info', text: `Uploading ${file.name} (${index + 1}/${files.length})` })
+    try {
+      for (const [index, file] of files.entries()) {
+        setUploadMessage({ type: 'info', text: `Uploading ${file.name} (${index + 1}/${files.length})` })
 
-      // Simulate incremental progress
-      for (let p = 0; p <= 100; p += Math.floor(10 + Math.random() * 20)) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((r) => setTimeout(r, 120))
-        const overall = Math.min(100, Math.round(((index + p / 100) / files.length) * 100))
-        setUploadProgress(overall)
+        try {
+          const response = await uploadDocument(file, (progress) => {
+            setUploadProgress(progress)
+          })
+
+          const status: UploadedDocument['status'] =
+            (response.chunks_indexed ?? 0) > 0 ? 'Indexed' : 'Failed'
+
+          uploadedDocuments.push({
+            id: `uploaded-${now.getTime()}-${index}`,
+            fileName: response.filename || file.name,
+            uploadDate: formatUploadDate(now),
+            size: formatFileSize(file.size),
+            status,
+          })
+        } catch {
+          uploadedDocuments.push({
+            id: `uploaded-${now.getTime()}-${index}`,
+            fileName: file.name,
+            uploadDate: formatUploadDate(now),
+            size: formatFileSize(file.size),
+            status: 'Failed',
+          })
+        }
       }
 
-      uploadedDocuments.push({
-        id: `uploaded-${now.getTime()}-${index}`,
-        fileName: file.name,
-        uploadDate: formatUploadDate(now),
-        size: formatFileSize(file.size),
-        status: 'Uploaded',
-      })
-    }
+      const backendDocuments = await getDocuments()
+      const mappedDocuments: UploadedDocument[] = backendDocuments.map((document) => ({
+        id: document.id,
+        fileName: document.filename,
+        uploadDate: document.uploadDate,
+        size: document.size,
+        status: document.status,
+      }))
 
-    setDocuments((currentDocuments) => [...uploadedDocuments, ...currentDocuments])
-    setUploadProgress(100)
-    setUploadMessage({ type: 'success', text: `Added ${uploadedDocuments.length} file(s)` })
-    // brief pause so user sees completion
-    await new Promise((r) => setTimeout(r, 600))
-    setIsUploading(false)
-    setUploadProgress(0)
+      setDocuments(mappedDocuments)
+      setUploadProgress(100)
+      setUploadMessage({
+        type: 'success',
+        text: uploadedDocuments.every((document) => document.status === 'Indexed')
+          ? `Uploaded ${uploadedDocuments.length} file(s)`
+          : `Processed ${uploadedDocuments.length} file(s)`,
+      })
+    } catch {
+      setUploadMessage({ type: 'error', text: 'Upload failed.' })
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
   }
 
-  const handleRemoveDocument = (documentId: string) => {
-    setDocuments((currentDocuments) =>
-      currentDocuments.filter((document) => document.id !== documentId),
-    )
+  const handlePreviewDocument = (documentId: string) => {
+    const previewUrl = getDocumentFileUrl(documentId)
+    window.open(previewUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleDownloadDocument = (documentId: string) => {
+    const downloadUrl = getDocumentDownloadUrl(documentId)
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+  }
+  const handleSummarize = (document: UploadedDocument) => {
+  navigate('/ai-chat', {
+    state: {
+      question: `Summarize the document "${document.fileName}".`,
+    },
+  })
+}
+
+  const handleRemoveDocument = async (documentId: string) => {
+    try {
+      await deleteDocument(documentId)
+      const backendDocuments = await getDocuments()
+      const mappedDocuments: UploadedDocument[] = backendDocuments.map((document) => ({
+        id: document.id,
+        fileName: document.filename,
+        uploadDate: document.uploadDate,
+        size: document.size,
+        status: document.status,
+      }))
+
+      setDocuments(mappedDocuments)
+      setUploadMessage({ type: 'success', text: 'Document deleted.' })
+    } catch {
+      setUploadMessage({ type: 'error', text: 'Failed to delete document.' })
+    }
   }
 
   return (
@@ -195,7 +251,13 @@ export default function Documents() {
         </div>
       ) : null}
 
-      <DocumentsTable documents={documents} onRemove={handleRemoveDocument} />
+      <DocumentsTable
+  documents={documents}
+  onPreview={handlePreviewDocument}
+  onDownload={handleDownloadDocument}
+  onRemove={handleRemoveDocument}
+  onSummarize={handleSummarize}
+/>
     </div>
   )
 }
