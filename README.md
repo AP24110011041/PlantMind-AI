@@ -1,3 +1,12 @@
++----------------------------------------------------------+
+|                                                          |
+|                     VERITAS AI                           |
+|      Enterprise Industrial Knowledge Intelligence        |
+|                                                          |
+|     FastAPI • React • Ollama • Llama 3 • ChromaDB        |
+|                                                          |
++----------------------------------------------------------+
+
 # 🚀 Veritas AI
 ### Transform Industrial Knowledge Into Intelligent Operations
 
@@ -165,7 +174,7 @@ Add screenshots here after uploading them.
 
 ## 📸 Dashboard
 
-![Dashboard](docs/DASHBOARD.png)
+![Dashboard](docs/dashboard.png)
 
 ## 📄 Documents
 
