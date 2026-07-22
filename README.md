@@ -163,19 +163,19 @@ veritas-ai/
 
 Add screenshots here after uploading them.
 
-### Dashboard
+## 📸 Dashboard
 
-![Dashboard](docs/dashboard.png)
+![Dashboard](docs/DASHBOARD.png)
 
-### Documents
+## 📄 Documents
 
 ![Documents](docs/documents.png)
 
-### AI Assistant
+## 🤖 AI Assistant
 
 ![AI Assistant](docs/assistant.png)
 
-### Analytics
+## 📊 Analytics
 
 ![Analytics](docs/analytics.png)
 
