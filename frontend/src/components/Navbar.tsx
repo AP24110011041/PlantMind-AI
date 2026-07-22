@@ -28,7 +28,7 @@ export default function Navbar({ pageTitle, pageSubtitle, onMenuToggle }: Navbar
 
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#06B6D4]">
-                PlantMind AI
+                Veritas AI
               </p>
               <h1 className="truncate text-xl font-semibold text-white sm:text-2xl">
                 {pageTitle}

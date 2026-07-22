@@ -93,7 +93,7 @@ export default function Alerts() {
         No Active Alerts
       </h2>
       <p className="mt-2 text-slate-400">
-        Your PlantMind AI workspace is healthy. No action is required.
+        Your Veritas AI workspace is healthy. No action is required.
       </p>
     </div>
   )}

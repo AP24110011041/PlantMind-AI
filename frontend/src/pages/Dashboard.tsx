@@ -65,7 +65,7 @@ const quickActions = [
   },
 ]
 
-const recentDocuments: RecentDocument[] = []
+
 
 const statusStyles: Record<RecentDocument['status'], string> = {
   Indexed: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
@@ -202,7 +202,7 @@ compliance monitoring, semantic search, and operational decision support.
   </h2>
 
   <p className="mt-2 text-slate-400">
-    Live insights generated from the PlantMind AI backend.
+    Live insights generated from the Veritas AI backend.
   </p>
   <div className="mt-4 rounded-lg border border-green-700 bg-green-950/40 p-4">
   <h3 className="text-lg font-semibold text-green-400">
@@ -296,7 +296,7 @@ compliance monitoring, semantic search, and operational decision support.
             <div>
               <h2 className="text-lg font-semibold text-white">Recent Documents</h2>
               <p className="mt-1 text-sm text-slate-400">
-                Latest uploaded documents from the PlantMind AI repository.
+                Latest uploaded documents from the Veritas AI repository.
               </p>
             </div>
             <button

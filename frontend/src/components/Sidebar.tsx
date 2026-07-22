@@ -4,7 +4,6 @@ import {
   Bot,
   FileText,
   LayoutDashboard,
-  MenuSquare,
   Settings,
   ShieldCheck,
 } from 'lucide-react'

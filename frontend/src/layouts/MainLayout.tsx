@@ -11,7 +11,7 @@ export default function MainLayout() {
   const isAssistantPage = location.pathname.startsWith('/assistant')
   const pageTitle = isDocumentsPage ? 'Documents' : isAssistantPage ? 'AI Assistant' : 'Dashboard'
   const pageSubtitle = isDocumentsPage
-    ? 'Upload, review, and manage PDF documents for the PlantMind workspace.'
+    ? 'Upload, review, and manage PDF documents for the Veritas AI workspace.'
     : isAssistantPage
       ? 'Ask questions across indexed documents with RAG citations.'
       : 'Unified command center for asset intelligence and operations readiness.'

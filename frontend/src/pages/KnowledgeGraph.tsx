@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getGraph, ingestText } from '../services/kgApi'
 
 type Node = { id: string; label: string; group?: string; x?: number; y?: number; vx?: number; vy?: number }
@@ -112,7 +112,7 @@ export default function KnowledgeGraph() {
       .finally(() => setLoading(false))
   }, [])
 
-  const fgData = useMemo(() => ({ nodes: graph.nodes, links: graph.links }), [graph])
+
   useForceSimulation(graph.nodes, graph.links)
 
   return (

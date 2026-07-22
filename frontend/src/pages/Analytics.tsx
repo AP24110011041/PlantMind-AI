@@ -68,7 +68,7 @@ export default function Analytics() {
     </h1>
 
     <p className="mt-2 text-stone-500">
-      Live analytics from the PlantMind AI backend.
+      Live analytics from the Veritas AI backend.
     </p>
   </div>
       <div className="grid grid-cols-4 gap-4">

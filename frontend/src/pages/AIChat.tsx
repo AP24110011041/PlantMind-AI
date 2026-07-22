@@ -224,7 +224,7 @@ export default function AIChat() {
           {isLoading && (
             <div className="flex items-center gap-2 text-cyan-300">
               <Sparkles className="h-5 w-5" />
-              PlantMind AI is searching indexed documents...
+              Veritas AI is searching indexed documents...
             </div>
           )}
 
@@ -249,7 +249,7 @@ export default function AIChat() {
             className="mt-3 flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 font-semibold text-black disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
-            Ask PlantMind AI
+            Ask Veritas AI
           </button>
           <button
   type="button"
